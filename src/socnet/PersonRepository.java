@@ -1,0 +1,106 @@
+package socnet;
+
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.index.Index;
+import org.neo4j.graphdb.index.IndexHits;
+import org.neo4j.helpers.collection.IterableWrapper;
+
+import static socnet.RelTypes.A_PERSON;
+
+public class PersonRepository
+{
+    private final GraphDatabaseService graphDb;
+    private final Index<Node> index;
+    private final Node personRefNode;
+
+    public PersonRepository( GraphDatabaseService graphDb, Index<Node> index )
+    {
+        this.graphDb = graphDb;
+        this.index = index;
+
+        personRefNode = getPersonsRootNode( graphDb );
+    }
+
+    private Node getPersonsRootNode( GraphDatabaseService graphDb )
+    {
+        Index<Node> referenceIndex = graphDb.index().forNodes( "reference");
+        IndexHits<Node> result = referenceIndex.get( "reference", "person" );
+        if (result.hasNext())
+        {
+            return result.next();
+        }
+
+        Node refNode = this.graphDb.createNode();
+        refNode.setProperty( "reference", "persons" );
+        referenceIndex.add( refNode, "reference", "persons" );
+        return refNode;
+    }
+
+    public Person createPerson( String name ) throws Exception
+    {
+        // to guard against duplications we use the lock grabbed on ref node
+        // when
+        // creating a relationship and are optimistic about person not existing
+        Node newPersonNode = graphDb.createNode();
+        personRefNode.createRelationshipTo( newPersonNode, A_PERSON );
+        // lock now taken, we can check if  already exist in index
+        Node alreadyExist = index.get( Person.NAME, name ).getSingle();
+        if ( alreadyExist != null )
+        {
+            throw new Exception( "Person with this name already exists " );
+        }
+        newPersonNode.setProperty( Person.NAME, name );
+        index.add( newPersonNode, Person.NAME, name );
+        return new Person( newPersonNode );
+    }
+
+    public Person getPersonByName( String name )
+    {
+        Node personNode = index.get( Person.NAME, name ).getSingle();
+        if ( personNode == null )
+        {
+            throw new IllegalArgumentException( "Person[" + name
+                    + "] not found" );
+        }
+        return new Person( personNode );
+    }
+
+    public void deletePerson( Person person )
+    {
+        Node personNode = person.getUnderlyingNode();
+        index.remove( personNode, Person.NAME, person.getName() );
+        for ( Person friend : person.getFriends() )
+        {
+            person.removeFriend( friend );
+        }
+        personNode.getSingleRelationship( A_PERSON, Direction.INCOMING ).delete();
+
+        for ( StatusUpdate status : person.getStatus() )
+        {
+            Node statusNode = status.getUnderlyingNode();
+            for ( Relationship r : statusNode.getRelationships() )
+            {
+                r.delete();
+            }
+            statusNode.delete();
+        }
+
+        personNode.delete();
+    }
+
+    public Iterable<Person> getAllPersons()
+    {
+        return new IterableWrapper<Person, Relationship>(
+                personRefNode.getRelationships( A_PERSON ) )
+        {
+            @Override
+            protected Person underlyingObjectToObject( Relationship personRel )
+            {
+                return new Person( personRel.getEndNode() );
+            }
+        };
+    }
+}
