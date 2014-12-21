@@ -1,14 +1,20 @@
 package socnet;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.helpers.collection.IterableWrapper;
 
 import static socnet.RelTypes.A_PERSON;
+import static socnet.RelTypes.FRIEND;
 
 public class PersonRepository
 {
@@ -16,56 +22,119 @@ public class PersonRepository
     private final Index<Node> index;
     private final Node personRefNode;
 
-    public PersonRepository( GraphDatabaseService graphDb, Index<Node> index )
+    public PersonRepository( GraphDatabaseService graphDb)
     {
         this.graphDb = graphDb;
-        this.index = index;
 
-        personRefNode = getPersonsRootNode( graphDb );
+        try ( Transaction tx = graphDb.beginTx() )
+        {
+        	index = graphDb.index().forNodes("personIndex");
+        	tx.success();
+        }
+        
+        personRefNode = getPersonsRootNode( graphDb );		
+        init();
     }
 
     private Node getPersonsRootNode( GraphDatabaseService graphDb )
     {
-        Index<Node> referenceIndex = graphDb.index().forNodes( "reference");
-        IndexHits<Node> result = referenceIndex.get( "reference", "person" );
-        if (result.hasNext())
+    	try ( Transaction tx = graphDb.beginTx() )
         {
-            return result.next();
+	        Index<Node> referenceIndex = graphDb.index().forNodes( "reference");
+	        IndexHits<Node> result = referenceIndex.get( "reference", "person" );
+	        if (result.hasNext())
+	        {
+	            return result.next();
+	        }
+	
+	        Node refNode = this.graphDb.createNode();
+	        refNode.setProperty( "reference", "persons" );
+	        referenceIndex.add( refNode, "reference", "persons" );
+	        
+	        tx.success();
+	        
+	        return refNode;
         }
-
-        Node refNode = this.graphDb.createNode();
-        refNode.setProperty( "reference", "persons" );
-        referenceIndex.add( refNode, "reference", "persons" );
-        return refNode;
     }
+    
+    //initialize the database, run once.
+    private void init()
+    {
+    	BufferedReader br = null;
+		try {
+			br = new BufferedReader(new FileReader(new File("randomData.txt")));
+			
+			//create person node.
+			String line = br.readLine();
+			String[] strings = line.split(" ");
+			int nodeCount = Integer.parseInt(strings[0]);
+			for (int i = 0; i < nodeCount; i++) {
+				createPerson("person" + i);
+			}
+			
+			//create friend relationship.
+			while (null != (line = br.readLine())) {
+				String[] names = line.split(" ");
 
+				addFriend(getPersonByName(names[1]), getPersonByName(names[0]));
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    }
+    
+
+    public void addFriend( Person fromPerson, Person toPerson )
+    {
+    	try ( Transaction tx = graphDb.beginTx() ) {
+	        if ( !fromPerson.equals( toPerson ) )
+	        {
+	            Relationship friendRel = fromPerson.getFriendRelationshipTo( toPerson );
+	            if ( friendRel == null )
+	            {
+	            	fromPerson.getUnderlyingNode().createRelationshipTo( toPerson.getUnderlyingNode(), FRIEND );
+	            }
+	        }
+	        tx.success();
+    	}
+    }
+    
     public Person createPerson( String name ) throws Exception
     {
         // to guard against duplications we use the lock grabbed on ref node
         // when
         // creating a relationship and are optimistic about person not existing
-        Node newPersonNode = graphDb.createNode();
-        personRefNode.createRelationshipTo( newPersonNode, A_PERSON );
-        // lock now taken, we can check if  already exist in index
-        Node alreadyExist = index.get( Person.NAME, name ).getSingle();
-        if ( alreadyExist != null )
-        {
-            throw new Exception( "Person with this name already exists " );
-        }
-        newPersonNode.setProperty( Person.NAME, name );
-        index.add( newPersonNode, Person.NAME, name );
-        return new Person( newPersonNode );
+    	try ( Transaction tx = graphDb.beginTx() ) {
+	        Node newPersonNode = graphDb.createNode();
+	        newPersonNode.addLabel(MyLabel.PERSON);
+	        personRefNode.createRelationshipTo( newPersonNode, A_PERSON );
+	        // lock now taken, we can check if  already exist in index
+	        Node alreadyExist = index.get( Person.NAME, name ).getSingle();
+	        if ( alreadyExist != null )
+	        {
+	            throw new Exception( "Person with this name already exists " );
+	        }
+	        newPersonNode.setProperty( Person.NAME, name );
+	        index.add( newPersonNode, Person.NAME, name );
+	        
+	        tx.success();
+	        return new Person( newPersonNode );
+    	}
     }
 
     public Person getPersonByName( String name )
     {
-        Node personNode = index.get( Person.NAME, name ).getSingle();
-        if ( personNode == null )
-        {
-            throw new IllegalArgumentException( "Person[" + name
-                    + "] not found" );
-        }
-        return new Person( personNode );
+    	try ( Transaction tx = graphDb.beginTx() ) {
+	        Node personNode = index.get( Person.NAME, name ).getSingle();
+	        if ( personNode == null )
+	        {
+	            throw new IllegalArgumentException( "Person[" + name
+	                    + "] not found" );
+	        }
+	        tx.success();
+	        return new Person( personNode );
+    	}
     }
 
     public void deletePerson( Person person )

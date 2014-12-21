@@ -1,14 +1,18 @@
 package socnet;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-
-import EmbeddedNeo4j.RelTypes;
 
 public class ConnectToNeo4j
 {
@@ -24,18 +28,10 @@ public class ConnectToNeo4j
     	deleteFileOrDirectory( new File( PATH_DB ) );
         graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( PATH_DB );
         registerShutdownHook();
-        createNodespace();
+        //createNodespace();
     }
 
-    public void createNodespace()
-    {
-        try ( Transaction tx = graphDb.beginTx() )
-        {
-            
 
-            tx.success();
-        }
-    }
     
     public void shutdown()
     {

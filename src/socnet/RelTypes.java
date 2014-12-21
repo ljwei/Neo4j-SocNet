@@ -10,3 +10,4 @@ public enum RelTypes implements RelationshipType
     NEXT,
     FRIEND
 }
+

@@ -14,6 +14,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.traversal.Evaluators;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Traverser;
@@ -30,6 +31,7 @@ import static org.neo4j.graphdb.PathExpanders.forTypeAndDirection;
 public class Person
 {
     static final String NAME = "name";
+    static final String ID = "id";
 
     // START SNIPPET: the-node
     private final Node underlyingNode;
@@ -75,18 +77,6 @@ public class Person
     }
 
     // END SNIPPET: override
-
-    public void addFriend( Person otherPerson )
-    {
-        if ( !this.equals( otherPerson ) )
-        {
-            Relationship friendRel = getFriendRelationshipTo( otherPerson );
-            if ( friendRel == null )
-            {
-                underlyingNode.createRelationshipTo( otherPerson.getUnderlyingNode(), FRIEND );
-            }
-        }
-    }
 
     public int getNrOfFriends()
     {
@@ -271,7 +261,7 @@ public class Person
         return retVal;
     }
 
-    private Relationship getFriendRelationshipTo( Person otherPerson )
+    public Relationship getFriendRelationshipTo( Person otherPerson )
     {
         Node otherNode = otherPerson.getUnderlyingNode();
         for ( Relationship rel : underlyingNode.getRelationships( FRIEND ) )
@@ -284,16 +274,17 @@ public class Person
         return null;
     }
 
-    private Iterable<Person> getFriendsByDepth( int depth )
+    public Iterable<Person> getFriendsByDepth( int depth )
     {
         // return all my friends and their friends using new traversal API
         TraversalDescription travDesc = graphDb().traversalDescription()
                 .breadthFirst()
-                .relationships( FRIEND )
+                .relationships( FRIEND , Direction.OUTGOING )
                 .uniqueness( Uniqueness.NODE_GLOBAL )
                 .evaluator( Evaluators.toDepth( depth ) )
                 .evaluator( Evaluators.excludeStartPosition() );
-
+        
+        //return travDesc.traverse( underlyingNode );
         return createPersonsFromPath( travDesc.traverse( underlyingNode ) );
     }
 
