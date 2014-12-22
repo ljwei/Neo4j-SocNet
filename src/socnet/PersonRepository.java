@@ -42,7 +42,7 @@ public class PersonRepository
     	try ( Transaction tx = graphDb.beginTx() )
         {
 	        Index<Node> referenceIndex = graphDb.index().forNodes( "reference");
-	        IndexHits<Node> result = referenceIndex.get( "reference", "person" );
+	        IndexHits<Node> result = referenceIndex.get( "reference", "persons" );
 	        if (result.hasNext())
 	        {
 	            return result.next();

@@ -27,9 +27,9 @@ public class MyComponent4 extends JPanel {
 		JPanel panelUp = new JPanel();
 		JPanel panelDown = new JPanel();
 		
-		JLabel inputL = new JLabel("please input name:");
+		JLabel inputL = new JLabel("请输入用户名:");
 		inputField = new JTextField("", 6);
-		JButton runButton = new JButton("Run");
+		JButton runButton = new JButton("查询");
 		runButton.addActionListener(runListener);
 		
 		panelUp.add(inputL);
@@ -65,9 +65,10 @@ public class MyComponent4 extends JPanel {
 	        Person p = Main.pr.getPersonByName(input);
 	        
 	        if (p == null) {
-	        	outputArea.append("user " + input + " is unfound" + "\n\n");
+	        	outputArea.append("用户名" + input + "不存在" + "\n\n");
 	        } else {
-		        outputArea.append("LATEST STATUS" + "\t\t" + "OWNER" +  "\t\t" + "TIME" + "\n");	  
+	        	outputArea.append("你关注的人发布的状态列表（按时间排序）");
+		        outputArea.append("状态内容" + "\t\t" + "发布人" +  "\t\t" + "发布时间" + "\n");	  
 		        int count = 0;
 		        try ( Transaction tx = Main.ctn.getGraphDb().beginTx() )
 		        {
@@ -78,7 +79,7 @@ public class MyComponent4 extends JPanel {
 			        	StatusUpdate status = itStatus.next();
 			        	outputArea.append(status.getStatusText() + "\t\t" + status.getPerson().getName() + "\t\t" + status.getDate() + "\n");
 			        }
-					outputArea.append("The latest statuses of those " + p.getName() + " follows , totally " + count + "\n\n");
+					outputArea.append("用户" + p.getName() + "有" + count + "条最新消息" + "\n\n");
 		
 		        	tx.success();
 		        }

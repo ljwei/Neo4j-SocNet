@@ -22,8 +22,15 @@ public class MyPanel extends JPanel {
         tabbedPane.addTab("被关注", panel3);  
   
         Component panel4 = new MyComponent4();  
-        tabbedPane.addTab("好友状态", panel4);  
+        tabbedPane.addTab("最新消息", panel4); 
+
+        Component panel6 = new MyComponent6();
+        tabbedPane.addTab("好友推荐", panel6);
+        
+        Component panel5 = new MyComponent5();
+        tabbedPane.addTab("图数据分析", panel5);
   
+        
         // 将选项卡添加到panl中  
         add(tabbedPane);  
     }  

@@ -26,9 +26,9 @@ public class MyComponent2 extends JPanel {
 		JPanel panelUp = new JPanel();
 		JPanel panelDown = new JPanel();
 		
-		JLabel inputL = new JLabel("please input name:");
+		JLabel inputL = new JLabel("请输入用户名:");
 		inputField = new JTextField("", 6);
-		JButton runButton = new JButton("Run");
+		JButton runButton = new JButton("查询");
 		runButton.addActionListener(runListener);
 		
 		panelUp.add(inputL);
@@ -64,9 +64,9 @@ public class MyComponent2 extends JPanel {
 	        Person p = Main.pr.getPersonByName(input);
 	        
 	        if (p == null) {
-	        	outputArea.append("user " + input + " is unfound" + "\n\n");
+	        	outputArea.append("用户名" + input + "不存在" + "\n\n");
 	        } else {
-	    		outputArea.append("FRIEND NAME" + "\t\t\t" + "LATEST STATUS" + "\n");
+	    		outputArea.append("关注的好友" + "\t\t\t" + "最新状态" + "\n");
 		        int count = 0;
 		        try ( Transaction tx = Main.ctn.getGraphDb().beginTx() )
 		        {
@@ -77,7 +77,7 @@ public class MyComponent2 extends JPanel {
 		            		break;
 	            		}
 	            	}
-					outputArea.append("the amount of " + p.getName() + "'s friends:" + count + "\n\n");
+					outputArea.append("用户" + p.getName() + "的好友总数为：" + count + "\n\n");
 		
 		        	tx.success();
 		        }

@@ -25,29 +25,24 @@ public class test {
         Iterable<Person> persons;
         try ( Transaction tx = ctn.getGraphDb().beginTx() )
         {
-        	persons = p.getFriends();
+        	persons = pr.getAllPersons();
         	for (Person friend : persons) {
-            	System.out.println(friend.toString());
-            	
-            	for (StatusUpdate status : friend.getStatus()) {
-            		System.out.println(status.getStatusText() + status.getDate());
-            	}
-            	break;
+            	System.out.println(friend.getName());
             }
         	tx.success();
         }
         
         
-        try ( Transaction tx = ctn.getGraphDb().beginTx() )
-        {
-	        Iterator<StatusUpdate> itStatus = p.friendStatuses();
-	        while (itStatus.hasNext())
-	        {
-	        	StatusUpdate status = itStatus.next();
-		        System.out.println(status.getStatusText() + status.getPerson());
-	        }
-	        tx.success();
-        }
+//        try ( Transaction tx = ctn.getGraphDb().beginTx() )
+//        {
+//	        Iterator<StatusUpdate> itStatus = p.friendStatuses();
+//	        while (itStatus.hasNext())
+//	        {
+//	        	StatusUpdate status = itStatus.next();
+//		        System.out.println(status.getStatusText() + status.getPerson());
+//	        }
+//	        tx.success();
+//        }
 	}
 
 }

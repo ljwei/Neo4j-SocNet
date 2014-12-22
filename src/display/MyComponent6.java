@@ -19,20 +19,27 @@ import org.neo4j.graphdb.Transaction;
 import socnet.Person;
 import socnet.StatusUpdate;
 
-public class MyComponent3 extends JPanel {
+public class MyComponent6 extends JPanel {
 	private JTextField inputField;
+	private JTextField inputField2;
+	private int amount = 20;
 	private JTextArea outputArea;
-	public MyComponent3() {
+	public MyComponent6() {
+		
 		JPanel panelUp = new JPanel();
 		JPanel panelDown = new JPanel();
 		
-		JLabel inputL = new JLabel("请输入用户名:");
+		JLabel inputL = new JLabel("请输入用户名：");
 		inputField = new JTextField("", 6);
+		JLabel inputL2 = new JLabel("要推荐的好友数量:");
+		inputField2 = new JTextField("", 6);
 		JButton runButton = new JButton("查询");
 		runButton.addActionListener(runListener);
 		
 		panelUp.add(inputL);
 		panelUp.add(inputField);
+		panelUp.add(inputL2);
+		panelUp.add(inputField2);
 		panelUp.add(runButton);
 		
 		JLabel output = new JLabel("输出:");
@@ -60,28 +67,26 @@ public class MyComponent3 extends JPanel {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			String input = inputField.getText().trim();
+			amount = Integer.parseInt(inputField2.getText().trim());
 			
 	        Person p = Main.pr.getPersonByName(input);
-	        
+	        outputArea.append("根据你好友的好友对你进行的推荐\n");
 	        if (p == null) {
 	        	outputArea.append("用户名" + input + "不存在" + "\n\n");
 	        } else {
-	    		outputArea.append("粉丝名" + "\t\t\t" + "最新状态" + "\n");
+		        outputArea.append("用户名" + "\t\t" + "关注人数" + "\t\t" + "粉丝数" + "\n");	  
 		        int count = 0;
 		        try ( Transaction tx = Main.ctn.getGraphDb().beginTx() )
 		        {
-	            	for (Person friend : p.getFans()) {
-	            		count++;
-	            		for (StatusUpdate status : friend.getStatus()) {
-		            		outputArea.append(friend.getName() + "\t\t\t" + status.getStatusText() + "\n");
-		            		break;
-	            		}
-	            	}
-					outputArea.append("用户" + p.getName() + "的粉丝数为:" + count + "\n\n");
+		        	for (Person friend : p.getFriendRecommendation(amount)) {
+			        	count++;
+			        	outputArea.append(friend.getName() + "\t\t" + friend.getNrOfFriends() + "\t\t" +friend.getNrOfFans() + "\n");
+			        }
 		
 		        	tx.success();
 		        }
 	        }
+	        outputArea.append("\n");
 		}
 	};
 }

@@ -88,6 +88,11 @@ public class Person
         return getFriendsByDepth( 1 );
     }
     
+    public int getNrOfFans()
+    {
+        return IteratorUtil.count( getFans() );
+    }
+    
     public Iterable<Person> getFans() {
     	return getFunsByDepth(1);
     }
