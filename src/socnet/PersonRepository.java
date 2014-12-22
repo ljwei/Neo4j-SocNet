@@ -13,6 +13,7 @@ import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.helpers.collection.IterableWrapper;
 
+import data.CreateRandomData;
 import static socnet.RelTypes.A_PERSON;
 import static socnet.RelTypes.FRIEND;
 
@@ -33,7 +34,7 @@ public class PersonRepository
         }
         
         personRefNode = getPersonsRootNode( graphDb );		
-        init();
+        //init();
     }
 
     private Node getPersonsRootNode( GraphDatabaseService graphDb )
@@ -62,7 +63,7 @@ public class PersonRepository
     {
     	BufferedReader br = null;
 		try {
-			br = new BufferedReader(new FileReader(new File("randomData.txt")));
+			br = new BufferedReader(new FileReader(new File(CreateRandomData.DATA_PERSON)));
 			
 			//create person node.
 			String line = br.readLine();
@@ -78,6 +79,15 @@ public class PersonRepository
 
 				addFriend(getPersonByName(names[1]), getPersonByName(names[0]));
 			}
+			
+			//create status node.
+			br = new BufferedReader(new FileReader(new File(CreateRandomData.DATA_STATUS)));
+			while (null != (line = br.readLine())) {
+				String[] status = line.split(" ");
+				getPersonByName(status[0]).addStatus(status[1]);
+			}
+			
+			br.close();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -125,16 +135,16 @@ public class PersonRepository
 
     public Person getPersonByName( String name )
     {
+    	Node personNode;
     	try ( Transaction tx = graphDb.beginTx() ) {
-	        Node personNode = index.get( Person.NAME, name ).getSingle();
+	        personNode = index.get( Person.NAME, name ).getSingle();
 	        if ( personNode == null )
 	        {
-	            throw new IllegalArgumentException( "Person[" + name
-	                    + "] not found" );
+	            return null;
 	        }
 	        tx.success();
-	        return new Person( personNode );
     	}
+    	return new Person( personNode );
     }
 
     public void deletePerson( Person person )

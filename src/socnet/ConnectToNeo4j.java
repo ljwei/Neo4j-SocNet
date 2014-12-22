@@ -19,13 +19,17 @@ public class ConnectToNeo4j
     private static final String PATH_DB = "target/socnet-db";
     private GraphDatabaseService graphDb;
 
+    public ConnectToNeo4j() {
+    	setUp();
+    }
+    
     public GraphDatabaseService getGraphDb() {
     	return graphDb;
     }
     
-    public void setUp()
+    private void setUp()
     {
-    	deleteFileOrDirectory( new File( PATH_DB ) );
+    	//deleteFileOrDirectory( new File( PATH_DB ) );
         graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( PATH_DB );
         registerShutdownHook();
         //createNodespace();

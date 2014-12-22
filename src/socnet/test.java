@@ -17,19 +17,37 @@ public class test {
 		// TODO Auto-generated method stub
 		//CreateRandomData crd = new CreateRandomData(100, 10);
 		ConnectToNeo4j ctn = new ConnectToNeo4j();
-		ctn.setUp();
 		
 		PersonRepository pr = new PersonRepository(ctn.getGraphDb());
 		
-		try ( Transaction tx = ctn.getGraphDb().beginTx() ) {
-
-	        Person p = pr.getPersonByName("person2");
-	        // START SNIPPET: traversebasetraverser
-	        for ( Person friend : p.getFriendsOfFriends() )
+        Person p = pr.getPersonByName("person2");
+        // START SNIPPET: traversebasetraverser
+        Iterable<Person> persons;
+        try ( Transaction tx = ctn.getGraphDb().beginTx() )
+        {
+        	persons = p.getFriends();
+        	for (Person friend : persons) {
+            	System.out.println(friend.toString());
+            	
+            	for (StatusUpdate status : friend.getStatus()) {
+            		System.out.println(status.getStatusText() + status.getDate());
+            	}
+            	break;
+            }
+        	tx.success();
+        }
+        
+        
+        try ( Transaction tx = ctn.getGraphDb().beginTx() )
+        {
+	        Iterator<StatusUpdate> itStatus = p.friendStatuses();
+	        while (itStatus.hasNext())
 	        {
-		        System.out.println(friend.getName());
+	        	StatusUpdate status = itStatus.next();
+		        System.out.println(status.getStatusText() + status.getPerson());
 	        }
-		}
+	        tx.success();
+        }
 	}
 
 }

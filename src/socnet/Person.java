@@ -87,6 +87,10 @@ public class Person
     {
         return getFriendsByDepth( 1 );
     }
+    
+    public Iterable<Person> getFans() {
+    	return getFunsByDepth(1);
+    }
 
     public void removeFriend( Person otherPerson )
     {
@@ -140,22 +144,28 @@ public class Person
 
         return onlyFriend( rankedFriends );
     }
-
+    
     public Iterable<StatusUpdate> getStatus()
     {
-        Relationship firstStatus = underlyingNode.getSingleRelationship(
-                STATUS, Direction.OUTGOING );
+    	Relationship firstStatus;
+    	TraversalDescription traversal;
+    	try ( Transaction tx = graphDb().beginTx() )
+        {
+	        firstStatus = underlyingNode.getSingleRelationship(
+	                STATUS, Direction.OUTGOING );
+	        tx.success();
+        }
+    	
         if ( firstStatus == null )
         {
             return Collections.emptyList();
         }
 
         // START SNIPPET: getStatusTraversal
-        TraversalDescription traversal = graphDb().traversalDescription()
+        traversal = graphDb().traversalDescription()
                 .depthFirst()
                 .relationships( NEXT );
         // END SNIPPET: getStatusTraversal
-
 
         return new IterableWrapper<StatusUpdate, Path>(
                 traversal.traverse( firstStatus.getEndNode() ) )
@@ -175,24 +185,29 @@ public class Person
 
     public void addStatus( String text )
     {
-        StatusUpdate oldStatus;
-        if ( getStatus().iterator().hasNext() )
-        {
-            oldStatus = getStatus().iterator().next();
-        } else
-        {
-            oldStatus = null;
-        }
 
         Node newStatus = createNewStatusNode( text );
-
-        if ( oldStatus != null )
+   
+        StatusUpdate oldStatus;
+    	try ( Transaction tx = graphDb().beginTx() )
         {
-            underlyingNode.getSingleRelationship( RelTypes.STATUS, Direction.OUTGOING ).delete();
-            newStatus.createRelationshipTo( oldStatus.getUnderlyingNode(), RelTypes.NEXT );
-        }
+	        if ( getStatus().iterator().hasNext() )
+	        {
+	            oldStatus = getStatus().iterator().next();
+	        } else
+	        {
+	            oldStatus = null;
+	        }
 
-        underlyingNode.createRelationshipTo( newStatus, RelTypes.STATUS );
+	        if ( oldStatus != null )
+	        {
+	            underlyingNode.getSingleRelationship( RelTypes.STATUS, Direction.OUTGOING ).delete();
+	            newStatus.createRelationshipTo( oldStatus.getUnderlyingNode(), RelTypes.NEXT );
+	        }
+	
+	        underlyingNode.createRelationshipTo( newStatus, RelTypes.STATUS );
+	        tx.success();
+        }
     }
 
     private GraphDatabaseService graphDb()
@@ -202,10 +217,16 @@ public class Person
 
     private Node createNewStatusNode( String text )
     {
-        Node newStatus = graphDb().createNode();
-        newStatus.setProperty( StatusUpdate.TEXT, text );
-        newStatus.setProperty( StatusUpdate.DATE, new Date().getTime() );
+    	Node newStatus;
+    	try ( Transaction tx = graphDb().beginTx() )
+        {
+	        newStatus = graphDb().createNode();
+	        newStatus.setProperty( StatusUpdate.TEXT, text );
+	        newStatus.setProperty( StatusUpdate.DATE, new Date().getTime() );
+	        tx.success();
+        }
         return newStatus;
+
     }
 
     private final class RankedPerson
@@ -288,6 +309,20 @@ public class Person
         return createPersonsFromPath( travDesc.traverse( underlyingNode ) );
     }
 
+    public Iterable<Person> getFunsByDepth( int depth )
+    {
+        // return all my friends and their friends using new traversal API
+        TraversalDescription travDesc = graphDb().traversalDescription()
+                .breadthFirst()
+                .relationships( FRIEND , Direction.INCOMING )
+                .uniqueness( Uniqueness.NODE_GLOBAL )
+                .evaluator( Evaluators.toDepth( depth ) )
+                .evaluator( Evaluators.excludeStartPosition() );
+        
+        //return travDesc.traverse( underlyingNode );
+        return createPersonsFromPath( travDesc.traverse( underlyingNode ) );
+    }
+    
     private IterableWrapper<Person, Path> createPersonsFromPath(
             Traverser iterableToWrap )
     {
